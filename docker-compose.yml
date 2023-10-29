@@ -1,6 +1,6 @@
 version: "3"
 networks:
-  realtime_userprofiles:
+  Mynetwork:
 
 services:
 
@@ -11,10 +11,11 @@ services:
     environment:
       - ALLOW_ANONYMOUS_LOGIN=yes
     networks:
-      - realtime_userprofiles
+      - Mynetwork
 
   kafka:
     image: 'bitnami/kafka:latest'
+    user: root
     ports:
       - '9092:9092'
     environment:
@@ -26,6 +27,6 @@ services:
     volumes:
       - ./Kafka:/bitnami/kafka
     networks:
-      - realtime_userprofiles
+      - Mynetwork
     depends_on:
       - zookeeper
