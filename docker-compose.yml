@@ -1,0 +1,36 @@
+version: '3'
+networks:
+  realtime_userprofile:
+
+services:
+  zookeeper:
+    image: wurstmeister/zookeeper
+    ports:
+      - "2181:2181"
+    networks:
+      - realtime_userprofile
+
+  kafka:
+    image: wurstmeister/kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_ADVERTISED_HOST_NAME: 172.17.0.1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_CREATE_TOPICS: "test-topic:5:2"
+    networks:
+      - realtime_userprofile
+
+  cassandra:
+    image: cassandra
+    ports:
+      - "9042:9042"
+    networks:
+      - realtime_userprofile
+
+  mongodb:
+    image: mongo
+    ports:
+      - "27017:27017"
+    networks:
+      - realtime_userprofile
