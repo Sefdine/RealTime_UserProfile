@@ -22,8 +22,9 @@ except NoBrokersAvailable as ne:
     sys.exit(1)
 
 users = []
+error_count = 0
 
-while len(users) < 100:
+while True:
     try:
         # Fetch data from randomuser.me
         response = requests.get('https://randomuser.me/api/')
@@ -44,7 +45,13 @@ while len(users) < 100:
 
     except Exception as e:
         logging.error('Error: %s', e)
-        break
+        for i in range(10):
+            print(f'Waiting {i}', end='\r')
+            time.sleep(1)
+
+        if error_count > 5:
+            break
+        error_count += 1
 
 # Close the producer after sending all messages
 producer.close()
