@@ -1,6 +1,4 @@
 version: "3"
-networks:
-  Mynetwork:
 
 services:
 
@@ -11,7 +9,7 @@ services:
     environment:
       - ALLOW_ANONYMOUS_LOGIN=yes
     networks:
-      - Mynetwork
+      - user_profiles
 
   kafka:
     image: 'bitnami/kafka:latest'
@@ -27,6 +25,29 @@ services:
     volumes:
       - ./Kafka:/bitnami/kafka
     networks:
-      - Mynetwork
+      - user_profiles
     depends_on:
       - zookeeper
+
+  cassandra:
+    image: cassandra:latest
+    ports:
+      - 9042:9042
+    networks:
+      - cassandra
+    hostname: "cassandra"
+
+  docker-cqlsh:
+    image: nuvo/docker-cqlsh
+    networks:
+      - cassandra
+    environment:
+      - CQLSH_HOST=cassandra
+      - CQLSH_PORT=9042
+      - CQLVERSION=3.4.6
+    command: ["tail", "-f", "/dev/null"]
+  
+networks:
+  user_profiles:
+  cassandra:
+    external: true
