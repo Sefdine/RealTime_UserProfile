@@ -15,8 +15,10 @@ TOPIC_NAME = 'user_profiles'
 SERVER_NAME = 'localhost:9092'
 
 # Initialize the Kafka producer
+print('Connecting to Kafka: ')
 try:
     producer = KafkaProducer(bootstrap_servers=SERVER_NAME, value_serializer=lambda v: json.dumps(v).encode('utf-8'))
+    print('Connection done !')
 except NoBrokersAvailable as ne:
     logging.error('No brokers available: %s', ne)
     sys.exit(1)
@@ -24,6 +26,7 @@ except NoBrokersAvailable as ne:
 users = []
 error_count = 0
 
+print('Fetch data from randomuser API')
 while True:
     try:
         # Fetch data from randomuser.me
