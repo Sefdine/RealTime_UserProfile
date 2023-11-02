@@ -44,7 +44,15 @@ services:
       - CQLSH_PORT=9042
       - CQLVERSION=3.4.6
     command: ["tail", "-f", "/dev/null"]
-  
+
+  mongodb:
+    image: mongo:latest
+    ports:
+      - 27017:27017
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=rootpassword
+
 networks:
   user_profiles:
   cassandra:
