@@ -46,12 +46,9 @@ services:
     command: ["tail", "-f", "/dev/null"]
 
   mongodb:
-    image: mongo:latest
+    image: bitnami/mongodb:latest
     ports:
       - 27017:27017
-    environment:
-      - MONGO_INITDB_ROOT_USERNAME=root
-      - MONGO_INITDB_ROOT_PASSWORD=rootpassword
 
 networks:
   user_profiles:
