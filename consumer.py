@@ -9,15 +9,21 @@ import logging
 import sys
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import padding
+from pymongo import MongoClient
+from datetime import datetime
 
 # Function to encrypt a value (UDF)
 def encrypt_value(value):
     key = b'YourPassword123@'  # Replace with a secure key
     cipher = Cipher(algorithms.AES(key), modes.ECB(), backend=default_backend())
     encryptor = cipher.encryptor()
-    # Ensure that the input value is a multiple of 16 (AES block size)
-    value = value + ' ' * (16 - len(value) % 16)
-    encrypted_value = encryptor.update(value.encode()) + encryptor.finalize()
+
+    # Use PKCS7 padding
+    padder = padding.PKCS7(algorithms.AES.block_size).padder()
+    padded_data = padder.update(value.encode()) + padder.finalize()
+
+    encrypted_value = encryptor.update(padded_data) + encryptor.finalize()
     return encrypted_value
 
 encrypt_udf = udf(lambda value: encrypt_value(value), StringType())
@@ -151,6 +157,13 @@ insert_statement = session.prepare(
     """
 )
 
+
+# Mongo code -------------------------
+# MongoDB connection
+mongo_client = MongoClient("mongodb://localhost:27017")
+mongo_db = mongo_client["user_profiles"]
+mongo_collection = mongo_db["users"]
+
 users_count = 0
 for message in consumer:
     # Convert the bytes object to a string
@@ -218,7 +231,36 @@ for message in consumer:
         # Insert the data into the Cassandra table
         session.execute(insert_statement, values[0])
 
+
+        # Create a document with the specified fields
+        age = datetime.now().year - int(values[0][7])
+        document = {
+            "gender": values[0][0],
+            "age": age,
+            "complete_name": encrypt_value(values[0][1]),
+            "complete_address": encrypt_value(values[0][2]),
+            "timezone_offset": values[0][3],
+            "timezone_description": values[0][4],
+            "dob_date": values[0][6],
+            "dob_year": values[0][7],
+            "dob_month": values[0][8],
+            "dob_day": values[0][9],
+            "dob_hours": values[0][10],
+            "dob_minutes": values[0][11],
+            "registration_date": values[0][12],
+            "id_name": values[0][15],
+            "id_value": values[0][16],
+            "picture_thumbnail": values[0][17],
+            "nat": values[0][18],
+            "insertion_timestamp": datetime.now()
+        }
+        # Insert the document into the collection
+        mongo_collection.insert_one(document)
+
         users_count += 1
-        print(f"User {users_count} inserted successfully in cassandra.")
+        print(f"User {users_count} inserted successfully in Cassandra and MongoDB.")        
+
     except Exception as e:
         print('Error: ',e)
+
+    
