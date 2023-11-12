@@ -86,3 +86,8 @@ We inserted the transformed data into Cassandra.
 Additionally, we aggregated the data and inserted it into MongoDB for further analysis.
 
 ![MongoDB Screenshot](Images/mongo.png)
+
+### Analysis
+We performed data analysis using Python Dash on MongoDB data.
+
+![Analysis Screenshot](Images/analyze.png)
