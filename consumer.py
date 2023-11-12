@@ -3,10 +3,24 @@ from kafka import KafkaConsumer
 from kafka.errors import NoBrokersAvailable
 from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField, StringType, IntegerType
-from pyspark.sql.functions import from_json, col, to_timestamp, date_format, concat_ws
+from pyspark.sql.functions import from_json, col, to_timestamp, date_format, concat_ws, udf
 from cassandra.cluster import Cluster
 import logging
 import sys
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.backends import default_backend
+
+# Function to encrypt a value (UDF)
+def encrypt_value(value):
+    key = b'YourPassword123@'  # Replace with a secure key
+    cipher = Cipher(algorithms.AES(key), modes.ECB(), backend=default_backend())
+    encryptor = cipher.encryptor()
+    # Ensure that the input value is a multiple of 16 (AES block size)
+    value = value + ' ' * (16 - len(value) % 16)
+    encrypted_value = encryptor.update(value.encode()) + encryptor.finalize()
+    return encrypted_value
+
+encrypt_udf = udf(lambda value: encrypt_value(value), StringType())
 
 # Define a topic name
 TOPIC_NAME = 'user_profiles'
@@ -112,12 +126,18 @@ session.execute(
         id_value text,
         picture_thumbnail text,
         nat text,
-        PRIMARY KEY (email)
-    )
+        insertion_timestamp timestamp,
+        PRIMARY KEY (email, insertion_timestamp)
+    ) WITH CLUSTERING ORDER BY (insertion_timestamp DESC);
     """
 )
 
-
+# Create the index if not exists
+session.execute(
+    """
+        CREATE INDEX IF NOT EXISTS idx_insertion_timestamp ON users (insertion_timestamp);
+    """
+)
 
 # Prepare the insert statement
 insert_statement = session.prepare(
@@ -126,8 +146,8 @@ insert_statement = session.prepare(
     (gender, complete_name, complete_address, timezone_offset, 
     timezone_description, email, dob_date, dob_year, dob_month, dob_day,
     dob_hours, dob_minutes, registration_date, phone, cell, id_name, 
-    id_value, picture_thumbnail, nat) 
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    id_value, picture_thumbnail, nat, insertion_timestamp) 
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, toUnixTimestamp(now()))
     """
 )
 
@@ -145,7 +165,7 @@ for message in consumer:
     
     transformed_df = parsed_df.withColumn(
         "complete_name",
-        concat_ws(" ", col("name.title"), col("name.first"), col("name.last"))
+        concat_ws(" ", col("name.first"), col("name.last"))
     ).withColumn(
         "complete_address",
         concat_ws(", ",
@@ -171,6 +191,16 @@ for message in consumer:
     ).withColumn(
         "registration_date",
         to_timestamp(col("registered.date"), "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
+    ).withColumn(
+        'email', encrypt_udf("email")
+    ).withColumn(
+        'phone', encrypt_udf("phone")
+    ).withColumn(
+        'cell', encrypt_udf("cell")
+    ).withColumn(
+        'complete_name', encrypt_udf("complete_name")
+    ).withColumn(
+        'complete_address', encrypt_udf("complete_address")
     )
 
     # Select the required columns
@@ -181,11 +211,14 @@ for message in consumer:
         "id.name", "id.value", "picture.thumbnail", "nat"
     )
 
-    # Convert the DataFrame to a list of values
-    values = transformed_df.rdd.map(list).collect()
+    try:
 
-    # Insert the data into the Cassandra table
-    session.execute(insert_statement, values[0])
+        # Convert the DataFrame to a list of values
+        values = transformed_df.rdd.map(list).collect()
+        # Insert the data into the Cassandra table
+        session.execute(insert_statement, values[0])
 
-    users_count += 1
-    print(f"User {users_count} inserted successfully in cassandra.")
+        users_count += 1
+        print(f"User {users_count} inserted successfully in cassandra.")
+    except Exception as e:
+        print('Error: ',e)
