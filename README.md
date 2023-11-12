@@ -76,3 +76,13 @@ The transformation performed aligns with GDPR compliance, and here is a breakdow
 - Removal of the age field since the date of birth is available for age calculation.
 - Establishment of a hierarchy for date-related fields.
 - Encryption of sensitive information such as email, phone, and cell numbers.
+
+### Insertion
+
+We inserted the transformed data into Cassandra.
+
+![Cassandra Screenshot](Images/cassandra.png)
+
+Additionally, we aggregated the data and inserted it into MongoDB for further analysis.
+
+![MongoDB Screenshot](Images/mongo.png)
