@@ -65,3 +65,14 @@ The data in the randomuser.me API is structured as follows:
     - **Medium**: A string representing the URL of the medium-sized picture.
     - **Thumbnail**: A string representing the URL of the thumbnail picture.
 12. **Nationality (Nat)**: A string representing the nationality.
+
+### Transformation
+
+The transformation performed aligns with GDPR compliance, and here is a breakdown of the steps:
+
+- Concatenation of the first name and last name to create an encrypted complete name.
+- Creation of an encrypted full address.
+- Conversion of dates into a standardized date format.
+- Removal of the age field since the date of birth is available for age calculation.
+- Establishment of a hierarchy for date-related fields.
+- Encryption of sensitive information such as email, phone, and cell numbers.
