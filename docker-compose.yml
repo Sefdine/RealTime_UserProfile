@@ -47,8 +47,11 @@ services:
 
   mongodb:
     image: bitnami/mongodb:latest
+    user: root
     ports:
       - 27017:27017
+    volumes:
+      - ./mongodb_data:/bitnami/mongodb
 
 networks:
   user_profiles:
